@@ -54,12 +54,17 @@ export interface IOrderedProduct {
 export interface IOrderDocument extends Document {
     orderId: string;
     invoiceNo?: number;
-    paymentMethod: 'COD' | 'Credit Card' | 'Debit Card' | 'Net Banking' | 'Online';
-    paymentStatus?: 'Pending' | 'Success' | 'Failed' | 'Completed' | 'Refund_Pending' | 'Refunded' | 'Cancelled' | 'Returned';
+    paymentMethod: 'COD' | 'Credit Card' | 'Debit Card' | 'Net Banking' | 'Online' | 'Manual UPI';
+    paymentStatus?: 'Pending' | 'Success' | 'Failed' | 'Completed' | 'Refund_Pending' | 'Refunded' | 'Cancelled' | 'Returned' | 'Pending Verification';
     globalOrderStatus: 'PENDING' | 'PLACED' | 'PARTIALLY_PROCESSING' | 'PROCESSING' | 'PARTIALLY_SHIPPED' | 'SHIPPED' | 'PARTIALLY_DELIVERED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'PARTIALLY_RETURNED' | 'RETURNED' | 'PARTIALLY_CANCELLED' | 'CANCELLATION_REQUEST' | 'RETURN_REQUEST';
     razorpayPaymentId?: string;
     razorpayOrderId?: string;
     razorpaySignature?: string;
+    paymentReferenceId?: string;
+    paymentVerificationStatus?: 'Pending' | 'Verified' | 'Rejected';
+    verifiedAt?: Date;
+    verifiedByAdmin?: mongoose.Types.ObjectId;
+    verificationRemarks?: string;
     address: IAddress;
     deliveryCharge: number;
     userId: mongoose.Types.ObjectId;
@@ -95,12 +100,12 @@ const orderSchema = new Schema<IOrderDocument>({
     invoiceNo: { type: Number },
     paymentMethod: {
         type: String,
-        enum: ['COD', 'Credit Card', 'Debit Card', 'Net Banking', 'Online'],
+        enum: ['COD', 'Credit Card', 'Debit Card', 'Net Banking', 'Online', 'Manual UPI'],
         required: true
     },
     paymentStatus: {
         type: String,
-        enum: ['Pending', 'Success', 'Failed', 'Completed', 'Refunded', 'Refund_Pending', 'Cancelled', 'Returned'],
+        enum: ['Pending', 'Success', 'Failed', 'Completed', 'Refunded', 'Refund_Pending', 'Cancelled', 'Returned', 'Pending Verification'],
     },
     globalOrderStatus: {
         type: String,
@@ -110,6 +115,14 @@ const orderSchema = new Schema<IOrderDocument>({
     razorpayPaymentId: { type: String },
     razorpayOrderId: { type: String },
     razorpaySignature: { type: String },
+    paymentReferenceId: { type: String },
+    paymentVerificationStatus: { 
+        type: String, 
+        enum: ['Pending', 'Verified', 'Rejected'] 
+    },
+    verifiedAt: { type: Date },
+    verifiedByAdmin: { type: Schema.Types.ObjectId, ref: 'User' },
+    verificationRemarks: { type: String },
     address: {
         house: { type: String, required: true },
         place: { type: String, required: true },

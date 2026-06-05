@@ -1,0 +1,66 @@
+
+export const verifyManualPayment = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const order = await OrderModel.findById(id).populate({ path: 'userId', model: 'User', select: 'displayName email imageUrl phoneNumber' });
+        
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+
+        const adminId = (req as any).admin?._id;
+        const adminName = (req as any).admin?.displayName || 'Admin';
+
+        order.paymentVerificationStatus = 'Verified';
+        order.paymentStatus = 'Completed';
+        order.verifiedAt = new Date();
+        if (adminId) {
+            order.verifiedByAdmin = adminId;
+        }
+
+        order.statusHistory.push({
+            status: `Manual Payment Verified by ${adminName}`,
+            timestamp: new Date(),
+            updatedBy: adminName
+        });
+
+        await order.save();
+        res.status(200).json({ success: true, message: 'Payment verified successfully', data: order });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message || 'Server error verifying payment' });
+    }
+};
+
+export const rejectManualPayment = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { remarks } = req.body;
+        
+        const order = await OrderModel.findById(id).populate({ path: 'userId', model: 'User', select: 'displayName email imageUrl phoneNumber' });
+        
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+
+        const adminId = (req as any).admin?._id;
+        const adminName = (req as any).admin?.displayName || 'Admin';
+
+        order.paymentVerificationStatus = 'Rejected';
+        order.paymentStatus = 'Failed';
+        order.verificationRemarks = remarks || 'Rejected by Admin';
+        if (adminId) {
+            order.verifiedByAdmin = adminId;
+        }
+
+        order.statusHistory.push({
+            status: `Manual Payment Rejected by ${adminName} - Reason: ${remarks}`,
+            timestamp: new Date(),
+            updatedBy: adminName
+        });
+
+        await order.save();
+        res.status(200).json({ success: true, message: 'Payment rejected successfully', data: order });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message || 'Server error rejecting payment' });
+    }
+};

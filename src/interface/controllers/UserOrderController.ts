@@ -25,7 +25,7 @@ export class UserOrderController {
         try {
             console.log("place order entry")
             const userId = (req as any).user.id;
-            const { addressId, paymentMethod, isOnline, referralCode, couponCode } = req.body;
+            const { addressId, paymentMethod, isOnline, referralCode, couponCode, paymentReferenceId } = req.body;
 
             // Fetch Cart
             const cart = await CartModel.findOne({ user: userId, isActive: true })
@@ -287,7 +287,7 @@ export class UserOrderController {
                     price: originalPrice,
                     finalPrice: finalPricePerUnit,
                     discounts: discounts,
-                    orderStatus: isOnline ? 'Pending' : 'Order Placed'
+                    orderStatus: (isOnline || paymentMethod === 'Manual UPI') ? 'Pending' : 'Order Placed'
                 };
             });
 
@@ -375,11 +375,13 @@ export class UserOrderController {
             // Construct Order Object
             const newOrder = new OrderModel({
                 orderId: orderId,
-                paymentMethod: isOnline ? 'Online' : (paymentMethod || 'COD'),
-                paymentStatus: 'Pending',
-                globalOrderStatus: isOnline ? 'PENDING' : 'PLACED',
+                paymentMethod: paymentMethod === 'Manual UPI' ? 'Manual UPI' : (isOnline ? 'Online' : (paymentMethod || 'COD')),
+                paymentStatus: paymentMethod === 'Manual UPI' ? 'Pending Verification' : 'Pending',
+                paymentVerificationStatus: paymentMethod === 'Manual UPI' ? 'Pending' : undefined,
+                paymentReferenceId: paymentMethod === 'Manual UPI' ? paymentReferenceId : undefined,
+                globalOrderStatus: (isOnline || paymentMethod === 'Manual UPI') ? 'PENDING' : 'PLACED',
                 statusHistory: [{
-                    status: isOnline ? 'Payment Pending' : 'Order Placed',
+                    status: (isOnline || paymentMethod === 'Manual UPI') ? 'Payment Pending' : 'Order Placed',
                     timestamp: new Date(),
                     updatedBy: 'Customer'
                 }],
@@ -410,7 +412,7 @@ export class UserOrderController {
 
             // Set placeholder for Razorpay logic block:
             // Handle Online Payment Initiation
-            if (isOnline) {
+            if (isOnline && paymentMethod !== 'Manual UPI') {
                 console.log("yes it is razorpay")
                 const razorpayOrder = await this.razorpayService.createOrder(totalAmount, orderId);
                 newOrder.razorpayOrderId = razorpayOrder.id;
@@ -424,7 +426,7 @@ export class UserOrderController {
 console.log(newOrder.razorpayOrderId,"new order razorpayid")
             res.status(200).json({
                 success: true,
-                message: isOnline ? 'Payment initiated' : 'Order placed successfully',
+                message: (isOnline && paymentMethod !== 'Manual UPI') ? 'Payment initiated' : 'Order placed successfully',
                 data: {
                     order: newOrder,
                     razorpayOrderId: newOrder.razorpayOrderId,
