@@ -78,7 +78,7 @@ const corsOptions = {
         process.env.CLIENT_URL || "http://localhost:5173",
         "http://localhost:5173",
         "http://localhost:5174",
-        "https://nature-edibles-frontend.vercel.app/",
+        "https://nature-edibles-frontend.vercel.app",
         "https://www.naturaledibles.in"
     ],
     credentials: true,
