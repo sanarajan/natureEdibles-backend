@@ -115,7 +115,7 @@ export class AdminComboOfferController {
                 console.log('[CreateComboOffer] Uploading to Cloudinary...');
                 try {
                     const uploadRes = await cloudinary.uploader.upload(b64Data, {
-                        folder: 'natural_ayam/combo_offers',
+                        folder: 'naturEdibles/combo_offers',
                     });
                     finalImageUrl = uploadRes.secure_url;
 
@@ -202,7 +202,7 @@ export class AdminComboOfferController {
                 if (b64Update.startsWith('data:image')) {
                     console.log('[UpdateComboOffer] New base64 image detected. Uploading...');
                     const uploadRes = await cloudinary.uploader.upload(b64Update, {
-                        folder: 'natural_ayam/combo_offers',
+                        folder: 'naturEdibles/combo_offers',
                     });
                     existing.imageUrl = uploadRes.secure_url;
                     console.log('[UpdateComboOffer] SUCCESS! Cloudinary URL:', existing.imageUrl);

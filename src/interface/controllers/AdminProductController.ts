@@ -78,7 +78,7 @@ export const addProduct = async (req: Request, res: Response) => {
             for (const img of images) {
                 if (img.startsWith('data:image')) {
                     const uploadRes = await cloudinary.uploader.upload(img, {
-                        folder: 'natural_ayam/products',
+                        folder: 'naturEdibles/products',
                     });
                     uploadedImages.push(uploadRes.secure_url);
                 }
@@ -195,7 +195,7 @@ export const updateProduct = async (req: Request, res: Response) => {
             for (const img of images) {
                 if (img.startsWith('data:image')) {
                     const uploadRes = await cloudinary.uploader.upload(img, {
-                        folder: 'natural_ayam/products',
+                        folder: 'naturEdibles/products',
                     });
                     updatedImages.push(uploadRes.secure_url);
                 } else if (img.startsWith('http')) {

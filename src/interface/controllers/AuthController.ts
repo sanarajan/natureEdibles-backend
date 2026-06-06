@@ -202,7 +202,7 @@ export class AuthController {
 
             if (avatar && avatar.startsWith('data:image')) {
                 const uploadRes = await cloudinary.uploader.upload(avatar, {
-                    folder: 'natural_ayam/users',
+                    folder: 'naturEdibles/users',
                 });
                 userDoc.imageUrl = uploadRes.secure_url;
             }

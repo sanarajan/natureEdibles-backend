@@ -19,7 +19,7 @@ async function fix() {
 
         const offer = await ComboOfferModel.findOne({ offerName: 'offer1' });
         if (offer) {
-            offer.imageUrl = 'https://res.cloudinary.com/deh6j5l21/image/upload/v1711150000/natural_ayam/combo_offers/sample.jpg';
+            offer.imageUrl = 'https://res.cloudinary.com/deh6j5l21/image/upload/v1711150000/naturEdibles/combo_offers/sample.jpg';
             await offer.save();
             console.log('Hardcoded image URL for offer1');
         } else {

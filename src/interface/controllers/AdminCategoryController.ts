@@ -20,7 +20,7 @@ export const addCategory = async (req: Request, res: Response) => {
         let uploadedImageUrl = imageUrl;
         if (imageUrl && imageUrl.startsWith('data:image')) {
             const uploadRes = await cloudinary.uploader.upload(imageUrl, {
-                folder: 'natural_ayam/categories',
+                folder: 'naturEdibles/categories',
             });
             uploadedImageUrl = uploadRes.secure_url;
         }
@@ -73,7 +73,7 @@ export const updateCategory = async (req: Request, res: Response) => {
         let uploadedImageUrl = imageUrl;
         if (imageUrl && imageUrl.startsWith('data:image')) {
             const uploadRes = await cloudinary.uploader.upload(imageUrl, {
-                folder: 'natural_ayam/categories',
+                folder: 'naturEdibles/categories',
             });
             uploadedImageUrl = uploadRes.secure_url;
         }

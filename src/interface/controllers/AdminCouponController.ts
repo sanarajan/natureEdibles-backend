@@ -27,7 +27,7 @@ export const addCoupon = async (req: Request, res: Response) => {
             for (const img of couponImage) {
                 if (img.startsWith('data:image')) {
                     const uploadRes = await cloudinary.uploader.upload(img, {
-                        folder: 'natural_ayam/coupons',
+                        folder: 'naturEdibles/coupons',
                     });
                     uploadedImages.push(uploadRes.secure_url);
                 }
@@ -112,7 +112,7 @@ export const updateCoupon = async (req: Request, res: Response) => {
             for (const img of couponImage) {
                 if (img.startsWith('data:image')) {
                     const uploadRes = await cloudinary.uploader.upload(img, {
-                        folder: 'natural_ayam/coupons',
+                        folder: 'naturEdibles/coupons',
                     });
                     updatedImages.push(uploadRes.secure_url);
                 } else if (img.startsWith('http')) {
