@@ -61,10 +61,10 @@ export class EmailService implements IEmailService {
         const mailOptions = {
             from: process.env.EMAIL_FROM || 'noreply@nature.com',
             to: email,
-            subject: 'Welcome to Naturalayam - Here is your Referral Code!',
+            subject: 'Welcome to Natural Edibles - Here is your Referral Code!',
             html: `
                 <div style="font-family: Arial, sans-serif; padding: 20px;">
-                    <h2>Welcome to Naturalayam!</h2>
+                    <h2>Welcome to Natural Edibles!</h2>
                     <p>Your email has been successfully verified.</p>
                     <p>We are excited to share your unique referral code:</p>
                     <h3 style="background-color: #f4f4f4; padding: 10px; display: inline-block; border-radius: 5px; color: #333;">${referralId}</h3>
@@ -115,7 +115,7 @@ export class EmailService implements IEmailService {
                     <p style="margin-top: 20px;">Or copy and paste this link into your browser:<br/>
                     <a href="${trackingUrl}">${trackingUrl}</a></p>
                     
-                    <p>Thank you for shopping with Naturalayam!</p>
+                    <p>Thank you for shopping with Natural Edibles!</p>
                 </div>
             `,
         };
