@@ -65,6 +65,7 @@ export interface IOrderDocument extends Document {
     verifiedAt?: Date;
     verifiedByAdmin?: mongoose.Types.ObjectId;
     verificationRemarks?: string;
+    paymentAccountId?: mongoose.Types.ObjectId;
     address: IAddress;
     deliveryCharge: number;
     userId: mongoose.Types.ObjectId;
@@ -123,6 +124,7 @@ const orderSchema = new Schema<IOrderDocument>({
     verifiedAt: { type: Date },
     verifiedByAdmin: { type: Schema.Types.ObjectId, ref: 'User' },
     verificationRemarks: { type: String },
+    paymentAccountId: { type: Schema.Types.ObjectId, ref: 'PaymentSettings' },
     address: {
         house: { type: String, required: true },
         place: { type: String, required: true },

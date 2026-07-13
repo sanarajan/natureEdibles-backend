@@ -32,6 +32,8 @@ import userWalletRoutes from './interface/routes/user/walletRoutes';
 import userCouponRoutes from './interface/routes/user/couponRoutes';
 import adminPaymentSettingsRoutes from './interface/routes/admin/adminPaymentSettingsRoutes';
 import userPaymentSettingsRoutes from './interface/routes/user/userPaymentSettingsRoutes';
+import adminConsultationRoutes from './interface/routes/admin/adminConsultationRoutes';
+import userConsultationRoutes from './interface/routes/user/userConsultationRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
 
 // Exported models to ensure registration
@@ -55,6 +57,8 @@ import './infrastructure/database/models/ReferralSettingModel';
 import './infrastructure/database/models/ShippingChargeModel';
 import './infrastructure/database/models/ShippingAgencyModel';
 import './infrastructure/database/models/PaymentSettingsModel';
+import './infrastructure/database/models/ConsultationSettingsModel';
+import './infrastructure/database/models/ConsultationBookingModel';
 
 
 
@@ -122,6 +126,8 @@ app.use('/api/user/wallet', userWalletRoutes);
 app.use('/api/user/coupon', userCouponRoutes);
 app.use('/api/admin/payment-settings', adminPaymentSettingsRoutes);
 app.use('/api/user/payment-settings', userPaymentSettingsRoutes);
+app.use('/api/admin/consultation', adminConsultationRoutes);
+app.use('/api/user/consultation', userConsultationRoutes);
 
 // Error Handler
 app.use(errorHandler);

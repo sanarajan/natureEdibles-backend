@@ -3,18 +3,9 @@ import { PaymentSettingsModel } from '../../infrastructure/database/models/Payme
 
 export const getPaymentSettings = async (req: Request, res: Response) => {
     try {
-        let settings = await PaymentSettingsModel.findOne();
+        const settings = await PaymentSettingsModel.findOne({ status: 'Active', isDefault: true });
         if (!settings) {
-            settings = new PaymentSettingsModel({
-                qrCodeImage: '/images/qrcode.jpeg',
-                upiId: 'sanamol87@okaxis',
-                phoneNumber: 'Not provided'
-            });
-            await settings.save();
-        } else if (settings.upiId === 'pending@upi' || settings.qrCodeImage.includes('qrserver') || settings.qrCodeImage.includes('placeholder')) {
-            settings.qrCodeImage = '/images/qrcode.jpeg';
-            settings.upiId = 'sanamol87@okaxis';
-            await settings.save();
+            return res.status(200).json({ success: true, settings: null, message: 'No active default payment account found.' });
         }
         return res.status(200).json({ success: true, settings });
     } catch (error) {

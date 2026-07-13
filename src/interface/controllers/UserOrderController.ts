@@ -10,6 +10,7 @@ import { ComboOfferModel } from '../../infrastructure/database/models/ComboOffer
 import { ShippingChargeModel } from '../../infrastructure/database/models/ShippingChargeModel';
 import mongoose from 'mongoose';
 import { IRazorpayService } from '../../domain/services/IRazorpayService';
+import { PricingService } from '../../domain/services/PricingService';
 import crypto from 'crypto';
 import { inject, injectable } from 'tsyringe';
 
@@ -25,7 +26,7 @@ export class UserOrderController {
         try {
             console.log("place order entry")
             const userId = (req as any).user.id;
-            const { addressId, paymentMethod, isOnline, referralCode, couponCode, paymentReferenceId } = req.body;
+            const { addressId, paymentMethod, isOnline, referralCode, couponCode, paymentReferenceId, paymentAccountId } = req.body;
 
             // Fetch Cart
             const cart = await CartModel.findOne({ user: userId, isActive: true })
@@ -48,243 +49,68 @@ export class UserOrderController {
                 return;
             }
 
-            const now = new Date();
-
-            // Fetch all active Combo Offers
-            const activeComboOffers = await ComboOfferModel.find({
-                status: true,
-                startDate: { $lte: now },
-                endDate: { $gte: now }
-            }).populate('products.productId');
-
-            // Fetch all active Product/Category Offers
-            const activeOffers = await OfferModel.find({
-                status: true,
-                startDate: { $lte: now },
-                endDate: { $gte: now }
+            const calculatedCart = await PricingService.calculate(cart, {
+                couponCode,
+                referralCode,
+                req: req as Request
             });
 
-            // Calculate Order Info
-            let subTotal = 0;
-            let totalOfferDiscount = 0;
-            let appliedComboOfferId: any = null;
-            let appliedComboOfferName: string = '';
-            let hasActiveOffers = false;
-            let hasComboOffer = false;
+            const { 
+                subtotalMRP, 
+                deliveryCharge: dummyDeliveryCharge, // Not used here 
+                totalDiscount, 
+                total 
+            } = calculatedCart.pricing;
 
-            // 1. Check for Best Combo Offer (Priority 1)
-            let bestCombo: any = null;
-            let bestComboDiscount = 0;
-            let applications = 0;
+            const {
+                hasComboOffer,
+                hasProductOffer,
+                hasCoupon,
+                hasReferral
+            } = calculatedCart.flags;
 
-            for (const combo of activeComboOffers) {
-                let isComboMet = true;
-                let comboSetMRP = 0;
+            const {
+                appliedComboOfferId,
+                appliedComboOfferName,
+                appliedReferralCode,
+                appliedReferralOwnerId,
+                appliedCouponId,
+                appliedCouponName,
+                appliedInfluencerId
+            } = calculatedCart.appliedOffers;
 
-                if (!combo.products || !Array.isArray(combo.products)) continue;
-
-                const requirements: Record<string, number> = {};
-                for (const cp of combo.products) {
-                    const prodDoc: any = cp.productId;
-                    const pId = prodDoc?._id?.toString() || cp.productId?.toString();
-                    if (!pId) continue;
-                    requirements[pId] = (requirements[pId] || 0) + cp.requiredQuantity;
-                    
-                    const price = Number(prodDoc?.price) || 0;
-                    comboSetMRP += price * cp.requiredQuantity;
-                }
-
-                const requiredPIds = Object.keys(requirements);
-                if (requiredPIds.length === 0) continue;
-
-                // Match check
-                for (const pId of requiredPIds) {
-                    const cartItem = cart.products.find((cp: any) => cp.product?._id?.toString() === pId);
-                    if (!cartItem || cartItem.quantity < requirements[pId]) {
-                        isComboMet = false;
-                        break;
-                    }
-                }
-
-                if (isComboMet) {
-                    let possibleApps = Infinity;
-                    for (const pId of requiredPIds) {
-                        const cartItem = cart.products.find((i: any) => i.product?._id?.toString() === pId);
-                        if (!cartItem) continue; // Should not happen due to match check above
-                        const appsForThisProd = Math.floor(cartItem.quantity / requirements[pId]);
-                        possibleApps = Math.min(possibleApps, appsForThisProd);
-                    }
-
-                    if (possibleApps > 0 && possibleApps !== Infinity) {
-                        let combosToApply = possibleApps;
-                        if (combo.maxUsagePerOrder && combo.maxUsagePerOrder > 0) {
-                            combosToApply = Math.min(possibleApps, combo.maxUsagePerOrder);
-                        }
-
-                        let discount = 0;
-                        const comboBaseAmount = roundTo2(comboSetMRP * combosToApply);
-
-                        if (combo.discountType === 'percentage') {
-                            discount = roundTo2((comboBaseAmount * (combo.discountValue || 0)) / 100);
-                        } else {
-                            discount = roundTo2((combo.discountValue || 0) * combosToApply);
-                        }
-
-                        if (discount > bestComboDiscount) {
-                            bestComboDiscount = discount;
-                            bestCombo = combo;
-                            applications = combosToApply;
-                            hasComboOffer = true;
-                        }
-                    }
-                }
-            }
-
-            if (bestCombo) {
-                appliedComboOfferId = bestCombo._id;
-                appliedComboOfferName = bestCombo.offerName;
-            }
-
-            // 2. Pre-calculate Distribution Record
-            const comboDistributions: Record<string, number> = {};
-            if (bestCombo && applications > 0) {
-                let remainingComboDiscount = bestComboDiscount;
-                const itemsToDistribute: any[] = [];
-                let actualUsedMRPTotal = 0;
-
-                cart.products.forEach((item: any) => {
-                    const pIdString = item.product?._id?.toString();
-                    if (!pIdString) return;
-
-                    const reqPerSet = bestCombo.products.reduce((acc: number, cp: any) => {
-                        const cpId = cp.productId?._id?.toString() || cp.productId?.toString();
-                        return cpId === pIdString ? acc + cp.requiredQuantity : acc;
-                    }, 0);
-
-                    if (reqPerSet > 0) {
-                        const usedQty = reqPerSet * applications;
-                        const price = Number(item.product.price) || 0;
-                        const usedMRP = roundTo2(price * usedQty);
-                        actualUsedMRPTotal += usedMRP;
-                        itemsToDistribute.push({ pId: pIdString, usedMRP });
-                    }
-                });
-
-                itemsToDistribute.forEach((item, idx) => {
-                    if (idx === itemsToDistribute.length - 1) {
-                        comboDistributions[item.pId] = roundTo2(remainingComboDiscount);
-                    } else {
-                        const share = roundTo2((item.usedMRP / actualUsedMRPTotal) * bestComboDiscount);
-                        comboDistributions[item.pId] = share;
-                        remainingComboDiscount = roundTo2(remainingComboDiscount - share);
-                    }
-                });
-            }
-
-            let totalMRP = 0;
-            let grandTotalDiscount = 0;
-            let hasProductOfferFlag = false;
-
-            const comboProductIds = new Set(
-                bestCombo?.products.map((p: any) =>
-                    p.productId?._id?.toString() || p.productId?.toString()
-                )
-            );
-
-            const orderedProducts = cart.products.map((item: any) => {
+            // Map products back to OrderModel schema
+            const orderedProducts = calculatedCart.products.map((item: any) => {
                 const p = item.product;
-                const originalPrice = p.price || 0;
-                const totalQty = item.quantity || 1;
-                totalMRP += (originalPrice * totalQty);
-                const pIdString = p?._id?.toString();
-
-                let qtyInCombo = 0;
-                if (bestCombo) {
-                    const reqPerSet = bestCombo.products.reduce((acc: number, cp: any) => {
-                        const cpId = cp.productId?._id?.toString() || cp.productId?.toString();
-                        return cpId === pIdString ? acc + cp.requiredQuantity : acc;
-                    }, 0);
-                    qtyInCombo = reqPerSet * applications;
-                }
-
-                const qtyEligibleForIndividualOffer = totalQty - qtyInCombo;
                 const discounts: any = {};
-                let productTotalDiscount = 0;
+                let finalPricePerUnit = item.finalUnitPrice;
 
-                // Combo Discount Share
-                if (qtyInCombo > 0) {
-                    const share = comboDistributions[pIdString] || 0;
-                    discounts.comboOffer = {
-                        offerId: bestCombo._id,
-                        offerName: bestCombo.offerName,
-                        discountAmount: share
-                    };
-                    productTotalDiscount += share;
+                if (item.appliedComboOffer) {
+                    discounts.comboOffer = item.appliedComboOffer;
                 }
-
-                // Individual Offers (Product/Category) for remaining quantities
-                // BUSINESS RULE: Individual offers are disabled if this product is part of the applied combo
-                if (!comboProductIds.has(pIdString) && qtyEligibleForIndividualOffer > 0) {
-                    let bestProductOffer: any = null;
-                    let bestCategoryOffer: any = null;
-                    
-                    const applicableOffers = activeOffers.filter(offer =>
-                        (offer.offerFor === 'product' && offer.productId?.toString() === p._id.toString()) ||
-                        (offer.offerFor === 'category' && offer.categoryId?.toString() === p.categoryId.toString())
-                    );
-
-                    applicableOffers.forEach(offer => {
-                        let discountAmt = 0;
-                        if (offer.discountType === 'percentage') {
-                            discountAmt = (originalPrice * (offer.discountValue || 0)) / 100;
-                        } else {
-                            discountAmt = offer.discountValue || 0;
-                        }
-
-                        if (offer.offerFor === 'product') {
-                            if (!bestProductOffer || discountAmt > (bestProductOffer.amt || 0)) {
-                                bestProductOffer = { offer, amt: discountAmt };
-                            }
-                        } else {
-                            if (!bestCategoryOffer || discountAmt > (bestCategoryOffer.amt || 0)) {
-                                bestCategoryOffer = { offer, amt: discountAmt };
-                            }
-                        }
-                    });
-
-                    if (bestProductOffer) {
-                        const amt = Math.round(bestProductOffer.amt * qtyEligibleForIndividualOffer);
+                if (item.appliedProductOffer) {
+                    if (item.appliedProductOffer.offerFor === 'product') {
                         discounts.productOffer = {
-                            offerId: bestProductOffer.offer._id,
-                            offerName: bestProductOffer.offer.offerName,
-                            discountAmount: amt
+                            offerId: item.appliedProductOffer.offerId,
+                            offerName: item.appliedProductOffer.offerName,
+                            discountAmount: item.appliedProductOffer.discountAmountPerUnit * item.quantity
                         };
-                        productTotalDiscount += amt;
-                        hasProductOfferFlag = true;
-                    }
-
-                    if (bestCategoryOffer) {
-                        const amt = Math.round(bestCategoryOffer.amt * qtyEligibleForIndividualOffer);
+                    } else {
                         discounts.categoryOffer = {
-                            offerId: bestCategoryOffer.offer._id,
-                            offerName: bestCategoryOffer.offer.offerName,
-                            discountAmount: amt
+                            offerId: item.appliedProductOffer.offerId,
+                            offerName: item.appliedProductOffer.offerName,
+                            discountAmount: item.appliedProductOffer.discountAmountPerUnit * item.quantity
                         };
-                        productTotalDiscount += amt;
-                        hasProductOfferFlag = true;
                     }
                 }
-
-                grandTotalDiscount += productTotalDiscount;
-                const finalPricePerUnit = ( (originalPrice * totalQty) - productTotalDiscount ) / totalQty;
 
                 return {
                     productId: p._id,
                     productName: p.productName,
                     category: p.categoryId,
-                    quantity: totalQty,
+                    quantity: item.quantity,
                     image: p.images && p.images.length > 0 ? p.images[0] : '',
-                    price: originalPrice,
+                    price: p.price,
                     finalPrice: finalPricePerUnit,
                     discounts: discounts,
                     orderStatus: (isOnline || paymentMethod === 'Manual UPI') ? 'Pending' : 'Order Placed'
@@ -292,60 +118,12 @@ export class UserOrderController {
             });
 
             // REJECTION RULE: If ANY offer exists (Combo or Individual), reject coupon/referral
-            if ((hasComboOffer || hasProductOfferFlag) && (couponCode || referralCode)) {
+            if ((hasComboOffer || hasProductOffer) && (couponCode || referralCode)) {
                 res.status(400).json({ 
                     success: false, 
                     message: "Coupon or referral cannot be applied when an active offer exists." 
                 });
                 return;
-            }
-
-            // 3. Final Calculations
-            let finalDiscountAmount = grandTotalDiscount;
-            let appliedReferralCode = '';
-            let appliedReferralOwnerId: any = null;
-            let appliedCouponId: any = null;
-            let appliedCouponName: any = null;
-
-            if (!hasComboOffer && !hasProductOfferFlag) {
-                if (referralCode) {
-                    const referrer = await UserModel.findOne({ referralId: referralCode });
-                    if (referrer && referrer._id.toString() !== userId) {
-                        const settings = await ReferralSettingModel.findOne({ isActive: true });
-                        const discountPercent = settings?.offerPercentage || 20;
-                        finalDiscountAmount = (totalMRP * discountPercent) / 100;
-                        appliedReferralCode = referralCode;
-                        appliedReferralOwnerId = referrer._id;
-                        
-                        // Distribute referral discount proportionally to finalPrice if needed
-                        // For now we just use the global discount as before but labeled in Order
-                    }
-                } else if (couponCode) {
-                    const coupon = await CouponModel.findOne({
-                        couponName: { $regex: new RegExp(`^${couponCode}$`, 'i') },
-                        status: true,
-                        startDate: { $lte: now },
-                        endDate: { $gte: now }
-                    });
-
-                    if (coupon) {
-                        if (totalMRP >= coupon.minPurchase) {
-                            if (coupon.discountType === 'Percentage') {
-                                finalDiscountAmount = (totalMRP * (coupon.discountPercentage || 0)) / 100;
-                            } else {
-                                finalDiscountAmount = coupon.discountValue || 0;
-                            }
-                            appliedCouponId = coupon._id;
-                            appliedCouponName = coupon.couponName;
-                        } else {
-                            res.status(400).json({ success: false, message: `Minimum purchase of ₹${coupon.minPurchase} required for coupon "${couponCode}"` });
-                            return;
-                        }
-                    } else {
-                        res.status(400).json({ success: false, message: `Invalid or expired coupon "${couponCode}"` });
-                        return;
-                    }
-                }
             }
 
             // Fetch Shipping Charge for the state
@@ -359,14 +137,15 @@ export class UserOrderController {
                 deliveryCharge = stateCharge.charge;
             }
 
-            const totalAmount = totalMRP + deliveryCharge - finalDiscountAmount;
+            const totalAmount = subtotalMRP + deliveryCharge - totalDiscount;
 
             // appliedOffersSummary
             let summary = "";
-            if (hasComboOffer) summary += `Combo: ${bestCombo.offerName} `;
-            if (hasProductOfferFlag) summary += `Product/Category Offers Applied `;
+            if (hasComboOffer) summary += `Combo: ${appliedComboOfferName} `;
+            if (hasProductOffer) summary += `Product/Category Offers Applied `;
             if (appliedCouponName) summary += `Coupon: ${appliedCouponName} `;
             if (appliedReferralCode) summary += `Referral: ${appliedReferralCode} `;
+            if (appliedInfluencerId) summary += `Influencer Discount Applied `;
 
             // Create Unique Order ID: ORD + 12 unique digits
             const random12 = Math.floor(Math.random() * 900000000000 + 100000000000).toString();
@@ -379,6 +158,7 @@ export class UserOrderController {
                 paymentStatus: paymentMethod === 'Manual UPI' ? 'Pending Verification' : 'Pending',
                 paymentVerificationStatus: paymentMethod === 'Manual UPI' ? 'Pending' : undefined,
                 paymentReferenceId: paymentMethod === 'Manual UPI' ? paymentReferenceId : undefined,
+                paymentAccountId: paymentAccountId || undefined,
                 globalOrderStatus: (isOnline || paymentMethod === 'Manual UPI') ? 'PENDING' : 'PLACED',
                 statusHistory: [{
                     status: (isOnline || paymentMethod === 'Manual UPI') ? 'Payment Pending' : 'Order Placed',
@@ -395,8 +175,8 @@ export class UserOrderController {
                 },
                 deliveryCharge: deliveryCharge,
                 userId: userId,
-                totalMRP: totalMRP,
-                totalDiscount: finalDiscountAmount,
+                totalMRP: subtotalMRP,
+                totalDiscount: totalDiscount,
                 comboOffer: appliedComboOfferId,
                 comboOfferName: appliedComboOfferName,
                 totalAmount: totalAmount,
@@ -405,7 +185,7 @@ export class UserOrderController {
                 coupon: appliedCouponId,
                 couponName: appliedCouponName,
                 hasComboOffer: hasComboOffer,
-                hasProductOffer: hasProductOfferFlag,
+                hasProductOffer: hasProductOffer,
                 appliedOffersSummary: summary.trim(),
                 orderedProducts: orderedProducts
             });
