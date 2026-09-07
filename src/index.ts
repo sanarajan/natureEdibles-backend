@@ -22,6 +22,7 @@ import adminShippingChargeRoutes from './interface/routes/admin/adminShippingCha
 import adminOfferRoutes from './interface/routes/admin/adminOfferRoutes';
 import adminComboOfferRoutes from './interface/routes/admin/adminComboOfferRoutes';
 import adminUserRoutes from './interface/routes/admin/adminUserRoutes';
+import adminNotificationRoutes from './interface/routes/admin/adminNotificationRoutes';
 import userAuthRoutes from './interface/routes/user/userAuthRoutes';
 import userCategoryRoutes from './interface/routes/user/categoryRoutes';
 import userProductRoutes from './interface/routes/user/productRoutes';
@@ -34,6 +35,7 @@ import adminPaymentSettingsRoutes from './interface/routes/admin/adminPaymentSet
 import userPaymentSettingsRoutes from './interface/routes/user/userPaymentSettingsRoutes';
 import adminConsultationRoutes from './interface/routes/admin/adminConsultationRoutes';
 import userConsultationRoutes from './interface/routes/user/userConsultationRoutes';
+import userNotificationRoutes from './interface/routes/user/userNotificationRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
 
 // Exported models to ensure registration
@@ -59,6 +61,7 @@ import './infrastructure/database/models/ShippingAgencyModel';
 import './infrastructure/database/models/PaymentSettingsModel';
 import './infrastructure/database/models/ConsultationSettingsModel';
 import './infrastructure/database/models/ConsultationBookingModel';
+import './infrastructure/database/models/NotificationModel';
 
 
 
@@ -105,6 +108,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin/notifications', adminNotificationRoutes);
 app.use('/api/admin/categories', adminCategoryRoutes);
 app.use('/api/admin/subcategories', adminSubcategoryRoutes);
 app.use('/api/admin/products', adminProductRoutes);
@@ -128,6 +132,7 @@ app.use('/api/admin/payment-settings', adminPaymentSettingsRoutes);
 app.use('/api/user/payment-settings', userPaymentSettingsRoutes);
 app.use('/api/admin/consultation', adminConsultationRoutes);
 app.use('/api/user/consultation', userConsultationRoutes);
+app.use('/api/user/notifications', userNotificationRoutes);
 
 // Error Handler
 app.use(errorHandler);

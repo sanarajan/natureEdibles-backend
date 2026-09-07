@@ -7,4 +7,5 @@ export interface IConsultationBookingRepository {
     findAll(filters?: any, page?: number, limit?: number): Promise<{ bookings: ConsultationBooking[], total: number }>;
     findByDate(date: string): Promise<ConsultationBooking[]>;
     update(id: string, updates: Partial<ConsultationBooking>): Promise<ConsultationBooking | null>;
+    updatePaymentReference(id: string, upiReference: string): Promise<ConsultationBooking | null>;
 }

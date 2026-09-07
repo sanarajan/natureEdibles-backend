@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'tsyringe';
-import { ICreateConsultationBookingUseCase, IGetAvailableSlotsUseCase, IGetUserConsultationsUseCase } from '../../application/interfaces/use-cases/consultation/IConsultationBookingUseCases';
+import { ICreateConsultationBookingUseCase, IGetAvailableSlotsUseCase, IGetUserConsultationsUseCase, IUpdateConsultationPaymentUseCase } from '../../application/interfaces/use-cases/consultation/IConsultationBookingUseCases';
 import { IGetConsultationSettingsUseCase } from '../../application/interfaces/use-cases/consultation/IConsultationSettingsUseCases';
 
 @injectable()
@@ -9,7 +9,8 @@ export class UserConsultationController {
         @inject('ICreateConsultationBookingUseCase') private createBookingUseCase: ICreateConsultationBookingUseCase,
         @inject('IGetAvailableSlotsUseCase') private getAvailableSlotsUseCase: IGetAvailableSlotsUseCase,
         @inject('IGetUserConsultationsUseCase') private getUserConsultationsUseCase: IGetUserConsultationsUseCase,
-        @inject('IGetConsultationSettingsUseCase') private getConsultationSettingsUseCase: IGetConsultationSettingsUseCase
+        @inject('IGetConsultationSettingsUseCase') private getConsultationSettingsUseCase: IGetConsultationSettingsUseCase,
+        @inject('IUpdateConsultationPaymentUseCase') private updateConsultationPaymentUseCase: IUpdateConsultationPaymentUseCase
     ) {}
 
     async createBooking(req: Request, res: Response) {
@@ -57,6 +58,26 @@ export class UserConsultationController {
             return res.status(200).json({ success: true, message: 'Settings fetched successfully', data: settings });
         } catch (error: any) {
             return res.status(500).json({ success: false, message: error.message || 'Error fetching settings' });
+        }
+    }
+
+    async updatePayment(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const { upiReference } = req.body;
+            
+            if (!upiReference || !/^\d{12}$/.test(upiReference)) {
+                return res.status(400).json({ success: false, message: 'Valid 12-digit UPI reference is required' });
+            }
+
+            const booking = await this.updateConsultationPaymentUseCase.execute(id, upiReference);
+            if (!booking) {
+                return res.status(404).json({ success: false, message: 'Consultation booking not found' });
+            }
+
+            return res.status(200).json({ success: true, message: 'Payment reference updated successfully', data: booking });
+        } catch (error: any) {
+            return res.status(500).json({ success: false, message: error.message || 'Error updating payment reference' });
         }
     }
 }

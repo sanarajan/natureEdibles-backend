@@ -7,11 +7,13 @@ import { RazorpayService } from '../services/RazorpayService';
 
 import { ConsultationSettingsRepository } from '../database/repositories/ConsultationSettingsRepository';
 import { ConsultationBookingRepository } from '../database/repositories/ConsultationBookingRepository';
+import { NotificationRepository } from '../database/repositories/NotificationRepository';
 
 // Repositories
 container.registerSingleton<UserRepository>('IUserRepository', UserRepository);
 container.registerSingleton<ConsultationSettingsRepository>('IConsultationSettingsRepository', ConsultationSettingsRepository);
 container.registerSingleton<ConsultationBookingRepository>('IConsultationBookingRepository', ConsultationBookingRepository);
+container.registerSingleton<NotificationRepository>('INotificationRepository', NotificationRepository);
 
 // Services
 container.registerSingleton<EmailService>('IEmailService', EmailService);

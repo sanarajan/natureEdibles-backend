@@ -52,10 +52,15 @@ export class ConsultationBooking {
         public appointmentDate: string, // YYYY-MM-DD
         public appointmentTime: string, // HH:mm
         // System / Admin
-        public status: string = 'Pending', // Pending, Confirmed, Completed, Cancelled
+        public status: string = 'PENDING', // PENDING, APPROVED, REJECTED
         public doctorNotes: string = '',
         public recommendedProducts: string[] = [], // Product IDs
         public readonly createdAt: Date = new Date(),
-        public readonly updatedAt: Date = new Date()
+        public readonly updatedAt: Date = new Date(),
+        public upiReference: string = '',
+        public rejectionReason: string = '',
+        public rejectedAt?: Date,
+        public approvedAt?: Date,
+        public paymentStatus: string = 'PENDING'
     ) {}
 }

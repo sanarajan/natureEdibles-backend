@@ -45,12 +45,24 @@ export class AdminConsultationController {
         try {
             const id = req.params.id as string;
             const updates = req.body;
+
+            if (updates.status === 'REJECTED' && (!updates.rejectionReason || updates.rejectionReason.trim().length < 3)) {
+                return res.status(400).json({ success: false, message: 'Rejection reason is required and must be at least 3 characters long.' });
+            }
+
             const updated = await this.updateConsultationStatusUseCase.execute(id, updates);
             if (!updated) {
                 return res.status(404).json({ success: false, message: 'Consultation not found' });
             }
             return res.status(200).json({ success: true, message: 'Consultation updated successfully', data: updated });
         } catch (error: any) {
+            if (
+                error.message === 'This consultation booking status has already been finalized.' ||
+                error.message === 'Mark as Refunded is allowed only when consultation is REJECTED and payment is REFUND_PENDING.' ||
+                error.message === 'REFUND_PENDING is allowed only when rejecting a PAID booking.'
+            ) {
+                return res.status(400).json({ success: false, message: error.message });
+            }
             return res.status(500).json({ success: false, message: error.message || 'Error updating consultation' });
         }
     }

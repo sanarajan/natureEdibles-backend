@@ -12,6 +12,10 @@ import { UpdateConsultationStatusUseCase } from '../../application/use-cases/con
 import { GetConsultationByIdUseCase } from '../../application/use-cases/consultation/GetConsultationByIdUseCase';
 import { GetConsultationSettingsUseCase } from '../../application/use-cases/consultation/GetConsultationSettingsUseCase';
 import { UpdateConsultationSettingsUseCase } from '../../application/use-cases/consultation/UpdateConsultationSettingsUseCase';
+import { UpdateConsultationPaymentUseCase } from '../../application/use-cases/consultation/UpdateConsultationPaymentUseCase';
+
+import { GetUserNotificationsUseCase } from '../../application/use-cases/notification/GetUserNotificationsUseCase';
+import { MarkNotificationReadUseCase } from '../../application/use-cases/notification/MarkNotificationReadUseCase';
 
 // UseCases
 container.registerSingleton<LoginUseCase>('ILoginUseCase', LoginUseCase);
@@ -27,6 +31,11 @@ container.registerSingleton<UpdateConsultationStatusUseCase>('IUpdateConsultatio
 container.registerSingleton<GetConsultationByIdUseCase>('IGetConsultationByIdUseCase', GetConsultationByIdUseCase);
 container.registerSingleton<GetConsultationSettingsUseCase>('IGetConsultationSettingsUseCase', GetConsultationSettingsUseCase);
 container.registerSingleton<UpdateConsultationSettingsUseCase>('IUpdateConsultationSettingsUseCase', UpdateConsultationSettingsUseCase);
+container.registerSingleton<UpdateConsultationPaymentUseCase>('IUpdateConsultationPaymentUseCase', UpdateConsultationPaymentUseCase);
 
 // Application Services
 container.registerSingleton<AuthService>('IAuthService', AuthService);
+
+// Notifications
+container.registerSingleton<GetUserNotificationsUseCase>('IGetUserNotificationsUseCase', GetUserNotificationsUseCase);
+container.registerSingleton<MarkNotificationReadUseCase>('IMarkNotificationReadUseCase', MarkNotificationReadUseCase);

@@ -23,3 +23,7 @@ export interface IUpdateConsultationStatusUseCase {
 export interface IGetConsultationByIdUseCase {
     execute(id: string): Promise<ConsultationBooking | null>;
 }
+
+export interface IUpdateConsultationPaymentUseCase {
+    execute(id: string, upiReference: string): Promise<ConsultationBooking | null>;
+}

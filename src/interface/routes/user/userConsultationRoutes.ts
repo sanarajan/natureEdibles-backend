@@ -10,5 +10,6 @@ router.post('/', userAuthProtect, userConsultationController.createBooking.bind(
 router.get('/available-slots', userConsultationController.getAvailableSlots.bind(userConsultationController));
 router.get('/settings', userConsultationController.getSettings.bind(userConsultationController));
 router.get('/history', userAuthProtect, userConsultationController.getUserConsultations.bind(userConsultationController));
+router.put('/:id/payment', userAuthProtect, userConsultationController.updatePayment.bind(userConsultationController));
 
 export default router;

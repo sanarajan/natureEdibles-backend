@@ -18,6 +18,16 @@ export class UserRepository extends BaseRepository<User, IUserDocument> implemen
         return this.findOne({ phoneNumber });
     }
 
+    async findByRole(role: string): Promise<User[]> {
+        const userDocs = await UserModel.find({ role }).exec();
+        return userDocs.map(doc => this.mapToEntity(doc));
+    }
+
+    async findByUserType(userType: number): Promise<User[]> {
+        const userDocs = await UserModel.find({ userType }).exec();
+        return userDocs.map(doc => this.mapToEntity(doc));
+    }
+
     async findById(id: string): Promise<User | null> {
         const userDoc = await UserModel.findById(id).populate('address_ids').exec();
         return userDoc ? this.mapToEntity(userDoc) : null;

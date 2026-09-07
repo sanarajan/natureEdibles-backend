@@ -49,6 +49,11 @@ export interface IConsultationBookingDocument extends Document {
     createdAt: Date;
     updatedAt: Date;
     paymentAccountId?: mongoose.Types.ObjectId;
+    upiReference?: string;
+    rejectionReason?: string;
+    rejectedAt?: Date;
+    approvedAt?: Date;
+    paymentStatus?: string;
 }
 
 const ConsultationBookingSchema = new Schema<IConsultationBookingDocument>({
@@ -94,10 +99,15 @@ const ConsultationBookingSchema = new Schema<IConsultationBookingDocument>({
     familySupport: { type: Boolean, required: true },
     appointmentDate: { type: String, required: true },
     appointmentTime: { type: String, required: true },
-    status: { type: String, enum: ['Pending', 'Confirmed', 'Completed', 'Cancelled'], default: 'Pending' },
+    status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' },
     doctorNotes: { type: String, default: '' },
     recommendedProducts: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
-    paymentAccountId: { type: Schema.Types.ObjectId, ref: 'PaymentSettings' }
+    paymentAccountId: { type: Schema.Types.ObjectId, ref: 'PaymentSettings' },
+    upiReference: { type: String },
+    rejectionReason: { type: String },
+    rejectedAt: { type: Date },
+    approvedAt: { type: Date },
+    paymentStatus: { type: String, enum: ['PENDING', 'PAID', 'REFUND_PENDING', 'REFUNDED'], default: 'PENDING' }
 }, { timestamps: true });
 
 export const ConsultationBookingModel = mongoose.model<IConsultationBookingDocument>('ConsultationBooking', ConsultationBookingSchema);

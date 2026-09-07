@@ -55,6 +55,11 @@ export class ConsultationBookingRepository implements IConsultationBookingReposi
         return doc ? this.mapToEntity(doc) : null;
     }
 
+    async updatePaymentReference(id: string, upiReference: string): Promise<ConsultationBooking | null> {
+        const doc = await ConsultationBookingModel.findByIdAndUpdate(id, { upiReference }, { new: true });
+        return doc ? this.mapToEntity(doc) : null;
+    }
+
     private mapToEntity(doc: IConsultationBookingDocument): ConsultationBooking {
         return new ConsultationBooking(
             doc._id.toString(),
@@ -104,7 +109,12 @@ export class ConsultationBookingRepository implements IConsultationBookingReposi
             doc.doctorNotes,
             doc.recommendedProducts ? doc.recommendedProducts.map(p => p.toString()) : [],
             doc.createdAt,
-            doc.updatedAt
+            doc.updatedAt,
+            doc.upiReference || '',
+            doc.rejectionReason || '',
+            doc.rejectedAt,
+            doc.approvedAt,
+            doc.paymentStatus || 'PENDING'
         );
     }
 }

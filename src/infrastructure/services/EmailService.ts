@@ -136,4 +136,137 @@ export class EmailService implements IEmailService {
             throw new Error('Failed to send shipping email');
         }
     }
+
+    async sendConsultationApprovedEmail(email: string, name: string, date: string, time: string): Promise<void> {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'noreply@nature.com',
+            to: email,
+            subject: 'Consultation Booking Approved',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2 style="color: #4CAF50;">Consultation Approved</h2>
+                    <p>Hello ${name},</p>
+                    <p>Your consultation booking for <strong>${date}</strong> at <strong>${time}</strong> has been approved.</p>
+                    <p>We look forward to helping you with your health journey.</p>
+                    <p>Thank you,</p>
+                    <p>Natural Edibles Team</p>
+                </div>
+            `,
+        };
+
+        try {
+            if (process.env.EMAIL_USER) {
+                await this.transporter.sendMail(mailOptions);
+                console.log(`Consultation approval email sent to ${email}`);
+            } else {
+                console.log(`[DEV MODE] Consultation Approval Email for ${email}`);
+            }
+        } catch (error) {
+            console.error('Error sending consultation approval email:', error);
+            if (process.env.NODE_ENV !== 'production') return;
+            throw new Error('Failed to send consultation approval email');
+        }
+    }
+
+    async sendConsultationRejectedEmail(email: string, name: string, reason: string, date: string, time: string, paymentStatus: string): Promise<void> {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'noreply@nature.com',
+            to: email,
+            subject: 'Consultation Rejected',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2 style="color: #d9534f;">Consultation Rejected</h2>
+                    <p>Hello ${name},</p>
+                    <p>We regret to inform you that your consultation booking for <strong>${date}</strong> at <strong>${time}</strong> could not be approved at this time.</p>
+                    <p><strong>Reason:</strong> ${reason}</p>
+                    ${paymentStatus === 'REFUND_PENDING' ? '<p><strong>Your refund is pending and will be processed.</strong></p>' : ''}
+                    <p>If you have any questions, please contact our support team.</p>
+                    <p>Thank you,</p>
+                    <p>Natural Edibles Team</p>
+                </div>
+            `,
+        };
+
+        try {
+            if (process.env.EMAIL_USER) {
+                await this.transporter.sendMail(mailOptions);
+                console.log(`Consultation rejection email sent to ${email}`);
+            } else {
+                console.log(`[DEV MODE] Consultation Rejection Email for ${email}`);
+            }
+        } catch (error) {
+            console.error('Error sending consultation rejection email:', error);
+            if (process.env.NODE_ENV !== 'production') return;
+            throw new Error('Failed to send consultation rejection email');
+        }
+    }
+
+    async sendConsultationRefundedEmail(email: string, name: string, date: string): Promise<void> {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'noreply@nature.com',
+            to: email,
+            subject: 'Consultation Refund Completed',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2 style="color: #4CAF50;">Refund Completed</h2>
+                    <p>Hello ${name},</p>
+                    <p>Your payment refund for the consultation on ${date} has been successfully completed.</p>
+                    <p>If you have any questions, please contact our support team.</p>
+                    <p>Thank you,</p>
+                    <p>Natural Edibles Team</p>
+                </div>
+            `,
+        };
+
+        try {
+            if (process.env.EMAIL_USER) {
+                await this.transporter.sendMail(mailOptions);
+                console.log(`Consultation refund email sent to ${email}`);
+            } else {
+                console.log(`[DEV MODE] Consultation Refund Email for ${email}`);
+            }
+        } catch (error) {
+            console.error('Error sending consultation refund email:', error);
+            if (process.env.NODE_ENV !== 'production') return;
+            throw new Error('Failed to send consultation refund email');
+        }
+    }
+
+    async sendNewConsultationAdminEmail(adminEmail: string, details: any): Promise<void> {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'noreply@nature.com',
+            to: adminEmail,
+            subject: 'New Consultation Booking Paid',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2 style="color: #4CAF50;">New Consultation Paid</h2>
+                    <p>A new consultation has successfully submitted payment details and is awaiting verification.</p>
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0;"><strong>Customer Name:</strong> ${details.fullName}</p>
+                        <p style="margin: 5px 0 0 0;"><strong>Phone:</strong> ${details.contactNumber || 'N/A'}</p>
+                        <p style="margin: 5px 0 0 0;"><strong>Consultation Date:</strong> ${details.appointmentDate}</p>
+                        <p style="margin: 5px 0 0 0;"><strong>Time:</strong> ${details.appointmentTime}</p>
+                        <p style="margin: 5px 0 0 0;"><strong>Health Issue:</strong> ${details.mainHealthIssue || 'N/A'}</p>
+                        <p style="margin: 5px 0 0 0;"><strong>Payment Status:</strong> ${details.paymentStatus}</p>
+                        <p style="margin: 5px 0 0 0;"><strong>UTR Reference:</strong> ${details.upiReference}</p>
+                        <p style="margin: 5px 0 0 0;"><strong>Booking Ref:</strong> ${details._id}</p>
+                    </div>
+                    <p>Please log in to the admin panel to review and approve/reject this booking.</p>
+                </div>
+            `,
+        };
+
+        try {
+            if (process.env.EMAIL_USER) {
+                await this.transporter.sendMail(mailOptions);
+                console.log(`Admin notification email sent to ${adminEmail}`);
+            } else {
+                console.log(`[DEV MODE] Admin Notification Email for ${adminEmail}`);
+            }
+        } catch (error) {
+            console.error('Error sending admin notification email:', error);
+            if (process.env.NODE_ENV !== 'production') return;
+            throw new Error('Failed to send admin notification email');
+        }
+    }
 }
