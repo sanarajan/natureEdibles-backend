@@ -10,11 +10,11 @@ export const userAuthProtect = async (
 ) => {
     console.log("reached in middleware user")
     let token;
-    if (req.cookies && req.cookies.user_jwt) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.user_jwt) {
         token = req.cookies.user_jwt;
-    } else {
-        const authHeader = req.headers['authorization'];
-        token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
     }
 
     if (!token) {

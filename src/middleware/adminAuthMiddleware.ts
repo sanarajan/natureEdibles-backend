@@ -8,12 +8,11 @@ export const adminAuthProtect = async (
     next: NextFunction
 ) => {
     let token;
-    // Check cookies first (as per my previous implementation) or headers
-    if (req.cookies && req.cookies.admin_jwt) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.admin_jwt) {
         token = req.cookies.admin_jwt;
-    } else {
-        const authHeader = req.headers['authorization'];
-        token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
     }
 
     if (!token) {
