@@ -226,7 +226,10 @@ export class PricingService {
                         price: origPrice,
                         categoryId: prod.categoryId,
                         subcategoryId: prod.subcategoryId,
-                        images: prod.images
+                        images: prod.images,
+                        stock: prod.stock !== undefined ? prod.stock : 0,
+                        isActive: prod.isActive !== undefined ? prod.isActive : true,
+                        sku: prod.sku || ''
                     },
                     quantity: Math.min(usedQty, totalQty),
                     isComboItem: true,
@@ -266,7 +269,10 @@ export class PricingService {
                         price: origPrice,
                         categoryId: prod.categoryId,
                         subcategoryId: prod.subcategoryId,
-                        images: prod.images
+                        images: prod.images,
+                        stock: prod.stock !== undefined ? prod.stock : 0,
+                        isActive: prod.isActive !== undefined ? prod.isActive : true,
+                        sku: prod.sku || ''
                     },
                     quantity: remainingQty,
                     isComboItem: false,

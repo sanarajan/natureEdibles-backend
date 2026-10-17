@@ -91,6 +91,13 @@ export class AuthController {
 
     async logout(req: Request, res: Response): Promise<void> {
         const prefix = req.baseUrl.includes('/admin') ? 'admin_' : 'user_';
+        const cookieOptions: any = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+        };
+        res.clearCookie(`${prefix}refreshToken`, cookieOptions);
+        res.clearCookie(`${prefix}jwt`, cookieOptions);
         res.clearCookie(`${prefix}refreshToken`);
         res.clearCookie(`${prefix}jwt`);
         res.status(200).json({

@@ -9,6 +9,7 @@ import { OfferModel } from '../../infrastructure/database/models/OfferModel';
 import { ComboOfferModel } from '../../infrastructure/database/models/ComboOfferModel';
 import { ShippingChargeModel } from '../../infrastructure/database/models/ShippingChargeModel';
 import mongoose from 'mongoose';
+import { ProductModel } from '../../infrastructure/database/models/ProductModel';
 import { IRazorpayService } from '../../domain/services/IRazorpayService';
 import { PricingService } from '../../domain/services/PricingService';
 import crypto from 'crypto';
@@ -40,6 +41,47 @@ export class UserOrderController {
             if (!cart || cart.products.length === 0) {
                 res.status(400).json({ success: false, message: 'Cart is empty' });
                 return;
+            }
+
+            // Validate current stock and active status for each product before order creation
+            const productQuantities: Map<string, { qty: number; name: string }> = new Map();
+            for (const item of cart.products) {
+                const pDoc: any = item.product;
+                const pId = (pDoc?._id || item.product).toString();
+                const freshProduct = await ProductModel.findById(pId);
+                
+                if (!freshProduct) {
+                    res.status(400).json({
+                        success: false,
+                        message: 'One or more products in your cart are no longer available. Please update your cart.'
+                    });
+                    return;
+                }
+                if (!freshProduct.isActive) {
+                    res.status(400).json({
+                        success: false,
+                        message: `Product '${freshProduct.productName}' is currently inactive and cannot be purchased. Please remove it from your cart.`
+                    });
+                    return;
+                }
+                if (freshProduct.stock <= 0) {
+                    res.status(400).json({
+                        success: false,
+                        message: `Sorry, '${freshProduct.productName}' is currently out of stock. Please remove it from your cart to continue.`
+                    });
+                    return;
+                }
+                const current = productQuantities.get(pId) || { qty: 0, name: freshProduct.productName };
+                current.qty += item.quantity;
+                productQuantities.set(pId, current);
+
+                if (current.qty > freshProduct.stock) {
+                    res.status(400).json({
+                        success: false,
+                        message: `Only ${freshProduct.stock} units of '${freshProduct.productName}' are available in stock. Please adjust your cart quantity.`
+                    });
+                    return;
+                }
             }
 
             // Fetch Address
@@ -190,15 +232,53 @@ export class UserOrderController {
                 orderedProducts: orderedProducts
             });
 
-            // Set placeholder for Razorpay logic block:
-            // Handle Online Payment Initiation
-            if (isOnline && paymentMethod !== 'Manual UPI') {
-                console.log("yes it is razorpay")
-                const razorpayOrder = await this.razorpayService.createOrder(totalAmount, orderId);
-                newOrder.razorpayOrderId = razorpayOrder.id;
+            // Atomically decrement stock to prevent overselling
+            const decrementedProducts: { productId: any; qty: number }[] = [];
+            for (const [pId, info] of productQuantities.entries()) {
+                const updatedProduct = await ProductModel.findOneAndUpdate(
+                    { _id: pId, isActive: true, stock: { $gte: info.qty } },
+                    { $inc: { stock: -info.qty } },
+                    { new: true }
+                );
+                if (!updatedProduct) {
+                    // Rollback previously decremented items
+                    for (const rollback of decrementedProducts) {
+                        await ProductModel.findByIdAndUpdate(rollback.productId, { $inc: { stock: rollback.qty } });
+                    }
+                    const freshProd = await ProductModel.findById(pId);
+                    if (!freshProd || !freshProd.isActive || freshProd.stock <= 0) {
+                        res.status(400).json({
+                            success: false,
+                            message: `Sorry, '${info.name}' is currently out of stock. Please remove it from your cart to continue.`
+                        });
+                    } else {
+                        res.status(400).json({
+                            success: false,
+                            message: `Only ${freshProd.stock} units of '${info.name}' are available in stock. Please adjust your cart quantity.`
+                        });
+                    }
+                    return;
+                }
+                decrementedProducts.push({ productId: pId, qty: info.qty });
             }
 
-            await newOrder.save();
+            try {
+                // Set placeholder for Razorpay logic block:
+                // Handle Online Payment Initiation
+                if (isOnline && paymentMethod !== 'Manual UPI') {
+                    console.log("yes it is razorpay")
+                    const razorpayOrder = await this.razorpayService.createOrder(totalAmount, orderId);
+                    newOrder.razorpayOrderId = razorpayOrder.id;
+                }
+
+                await newOrder.save();
+            } catch (innerErr) {
+                // Rollback stock decrement on order save / payment initiation failure
+                for (const rollback of decrementedProducts) {
+                    await ProductModel.findByIdAndUpdate(rollback.productId, { $inc: { stock: rollback.qty } });
+                }
+                throw innerErr;
+            }
 
             // Clear Cart after successful generic order creation (COD or Online initiation)
             cart.products = [];

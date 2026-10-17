@@ -101,7 +101,7 @@ export const addProduct = async (req: Request, res: Response) => {
             isPopular: isPopular === true || isPopular === 'true',
             isTrending: isTrending === true || isTrending === 'true',
             isBestSeller: isBestSeller === true || isBestSeller === 'true',
-            isActive: true
+            isActive: req.body.isActive !== undefined ? (req.body.isActive === true || req.body.isActive === 'true') : true
         });
 
         await newProduct.save();
@@ -189,6 +189,9 @@ export const updateProduct = async (req: Request, res: Response) => {
         product.isPopular = isPopular === true || isPopular === 'true';
         product.isTrending = isTrending === true || isTrending === 'true';
         product.isBestSeller = isBestSeller === true || isBestSeller === 'true';
+        if (req.body.isActive !== undefined) {
+            product.isActive = req.body.isActive === true || req.body.isActive === 'true';
+        }
 
         if (images && Array.isArray(images)) {
             const updatedImages: string[] = [];
@@ -264,6 +267,27 @@ export const toggleProductHighlight = async (req: Request, res: Response) => {
         res.status(200).json({ success: true, message: `Product ${field} updated successfully`, data: product });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const toggleProductStatus = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const product = await ProductModel.findById(id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        product.isActive = !product.isActive;
+        await product.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Product ${product.isActive ? 'activated' : 'deactivated'} successfully`,
+            data: product
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message || 'Error updating product status' });
     }
 };
 

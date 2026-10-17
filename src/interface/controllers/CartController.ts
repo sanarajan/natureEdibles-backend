@@ -44,6 +44,14 @@ export const toggleCartItem = async (req: Request, res: Response) => {
         const { productId, quantity = 1 } = req.body;
         if (!productId) return res.status(400).json({ success: false, message: 'Product ID is required' });
 
+        const productDoc = await ProductModel.findById(productId);
+        if (!productDoc || !productDoc.isActive) {
+            return res.status(400).json({ success: false, message: 'This product is currently inactive and unavailable for purchase.' });
+        }
+        if (productDoc.stock <= 0) {
+            return res.status(400).json({ success: false, message: `Sorry, '${productDoc.productName}' is currently out of stock.` });
+        }
+
         let cart = await CartModel.findOne({ user: userId, isActive: true });
         if (!cart) cart = new CartModel({ user: userId, products: [], isActive: true });
 
@@ -52,6 +60,11 @@ export const toggleCartItem = async (req: Request, res: Response) => {
             const pId = (p.product?._id || p.product).toString();
             return pId === productId;
         });
+
+        const newTotalQty = (productIndex > -1 ? cart.products[productIndex].quantity : 0) + Number(quantity);
+        if (newTotalQty > productDoc.stock) {
+            return res.status(400).json({ success: false, message: `Only ${productDoc.stock} units of '${productDoc.productName}' are available in stock.` });
+        }
 
         if (productIndex > -1) {
             cart.products[productIndex].quantity += Number(quantity);
@@ -79,6 +92,17 @@ export const updateCartItemQuantity = async (req: Request, res: Response) => {
         const userId = (req as any).user.id;
         const { productId, quantity } = req.body;
         if (!productId || quantity === undefined) return res.status(400).json({ success: false, message: 'Invalid product details' });
+
+        const productDoc = await ProductModel.findById(productId);
+        if (!productDoc || !productDoc.isActive) {
+            return res.status(400).json({ success: false, message: 'This product is currently inactive and cannot be purchased.' });
+        }
+        if (productDoc.stock <= 0) {
+            return res.status(400).json({ success: false, message: `Sorry, '${productDoc.productName}' is currently out of stock.` });
+        }
+        if (Number(quantity) > productDoc.stock) {
+            return res.status(400).json({ success: false, message: `Only ${productDoc.stock} units of '${productDoc.productName}' are available in stock.` });
+        }
 
         const cart = await CartModel.findOne({ user: userId, isActive: true });
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
@@ -141,7 +165,12 @@ export const syncOfflineCart = async (req: Request, res: Response) => {
         for (const item of cartItems) {
             const pId = (item.product?._id || item.product)?.toString();
             if (!pId || !validObjectId.test(pId)) continue; 
-            const qty = Math.max(1, Number(item.quantity) || 1);
+            const productDoc = await ProductModel.findById(pId);
+            if (!productDoc || !productDoc.isActive || productDoc.stock <= 0) continue;
+            let qty = Math.max(1, Number(item.quantity) || 1);
+            if (qty > productDoc.stock) {
+                qty = productDoc.stock;
+            }
             
             const index = cart.products.findIndex(p => {
                 const existingId = (p.product?._id || p.product).toString();
@@ -149,7 +178,7 @@ export const syncOfflineCart = async (req: Request, res: Response) => {
             });
 
             if (index > -1) {
-                cart.products[index].quantity += qty;
+                cart.products[index].quantity = Math.min(productDoc.stock, cart.products[index].quantity + qty);
             } else {
                 cart.products.push({ product: new mongoose.Types.ObjectId(pId), quantity: qty });
             }

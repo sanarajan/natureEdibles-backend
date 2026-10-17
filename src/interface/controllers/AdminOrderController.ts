@@ -3,6 +3,7 @@ import { OrderModel } from '../../infrastructure/database/models/OrderModel';
 import { container } from '../../infrastructure/config/container';
 import { EmailService } from '../../infrastructure/services/EmailService';
 import { UserModel } from '../../infrastructure/database/models/UserModel';
+import { ProductModel } from '../../infrastructure/database/models/ProductModel';
 
 export const getAllOrders = async (req: Request, res: Response) => {
     try {
@@ -168,6 +169,7 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
             }
 
             updatedItemName = product.productName;
+            const wasTerminal = product.orderStatus === 'Cancelled' || product.orderStatus === 'Returned' || product.orderStatus === 'Return';
             product.orderStatus = status;
 
             if (status === 'Shipped' && shippingDetails) {
@@ -194,9 +196,14 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
                     cancelDate: new Date()
                 };
             }
+
+            if ((status === 'Cancelled' || status === 'Returned' || status === 'Return') && !wasTerminal) {
+                await ProductModel.findByIdAndUpdate(product.productId, { $inc: { stock: product.quantity } });
+            }
         } else {
             // Update status for all products in the order
-            order.orderedProducts.forEach(product => {
+            for (const product of order.orderedProducts) {
+                const wasTerminal = product.orderStatus === 'Cancelled' || product.orderStatus === 'Returned' || product.orderStatus === 'Return';
                 product.orderStatus = status;
 
                 if (status === 'Shipped' && shippingDetails) {
@@ -223,7 +230,11 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
                         cancelDate: new Date()
                     };
                 }
-            });
+
+                if ((status === 'Cancelled' || status === 'Returned' || status === 'Return') && !wasTerminal) {
+                    await ProductModel.findByIdAndUpdate(product.productId, { $inc: { stock: product.quantity } });
+                }
+            }
 
             // Handle Payment Status logic
             if (status === 'Cancelled' || status === 'Cancellation Request') {
