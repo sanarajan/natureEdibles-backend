@@ -24,7 +24,7 @@ export const adminAuthProtect = async (
     const authService = container.resolve<IAuthService>('IAuthService');
     try {
         const payload = await authService.verifyAccessToken(token);
-
+console.log(payload+" payload und "+payload.role.toUpperCase() +" rolename")
         // Explicit Role Check
         if (payload.role.toUpperCase() !== 'ADMIN') {
             res.status(403).json({ success: false, message: 'Forbidden: Admin access required' });
