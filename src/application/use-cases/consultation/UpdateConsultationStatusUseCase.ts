@@ -23,14 +23,21 @@ export class UpdateConsultationStatusUseCase implements IUpdateConsultationStatu
 
         // Only enforce validation if consultation status is being updated
         if (updates.status && updates.status !== existing.status) {
-            if (existing.status === 'APPROVED' || existing.status === 'REJECTED') {
-                throw new Error('This consultation booking status has already been finalized.');
+            if (existing.status === 'REJECTED') {
+                throw new Error('This consultation booking status has already been finalized as rejected.');
+            }
+            if (existing.status === 'COMPLETED') {
+                throw new Error('This consultation booking has already been completed.');
+            }
+            if (existing.status === 'APPROVED' && updates.status !== 'COMPLETED') {
+                 throw new Error('An approved consultation can only be marked as COMPLETED.');
             }
             if (updates.status === 'APPROVED') {
                 updates.approvedAt = new Date();
             } else if (updates.status === 'REJECTED') {
                 updates.rejectedAt = new Date();
             }
+            // If status is COMPLETED, we just let it update
         }
 
         // Enforce payment status transitions

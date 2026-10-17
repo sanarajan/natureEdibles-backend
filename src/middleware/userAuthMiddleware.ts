@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { container } from 'tsyringe';
 import { IAuthService } from '../application/interfaces/IAuthService';
+import { IUserRepository } from '../domain/repositories/IUserRepository';
 
 export const userAuthProtect = async (
     req: Request,
@@ -31,6 +32,18 @@ export const userAuthProtect = async (
             res.status(403).json({
                 success: false,
                 message: `Forbidden: User access required. Your role: ${payload.role || 'missing'}`,
+            });
+            return;
+        }
+
+        const userRepository = container.resolve<IUserRepository>('IUserRepository');
+        const fullUser = await userRepository.findById(payload.id);
+
+        if (fullUser && fullUser.isActive === false) {
+            res.status(403).json({
+                success: false,
+                message: "Your account has been deactivated. Please contact support.",
+                code: "ACCOUNT_INACTIVE"
             });
             return;
         }

@@ -99,7 +99,7 @@ const ConsultationBookingSchema = new Schema<IConsultationBookingDocument>({
     familySupport: { type: Boolean, required: true },
     appointmentDate: { type: String, required: true },
     appointmentTime: { type: String, required: true },
-    status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' },
+    status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'], default: 'PENDING' },
     doctorNotes: { type: String, default: '' },
     recommendedProducts: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
     paymentAccountId: { type: Schema.Types.ObjectId, ref: 'PaymentSettings' },

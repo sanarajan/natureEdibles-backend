@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { inject, injectable } from 'tsyringe';
 import { IGetAdminConsultationsUseCase, IUpdateConsultationStatusUseCase, IGetConsultationByIdUseCase } from '../../application/interfaces/use-cases/consultation/IConsultationBookingUseCases';
 import { IGetConsultationSettingsUseCase, IUpdateConsultationSettingsUseCase } from '../../application/interfaces/use-cases/consultation/IConsultationSettingsUseCases';
+import { IUpdateConsultationDateUseCase } from '../../application/interfaces/use-cases/consultation/IConsultationBookingUseCases';
 
 @injectable()
 export class AdminConsultationController {
@@ -10,7 +11,8 @@ export class AdminConsultationController {
         @inject('IUpdateConsultationStatusUseCase') private updateConsultationStatusUseCase: IUpdateConsultationStatusUseCase,
         @inject('IGetConsultationSettingsUseCase') private getConsultationSettingsUseCase: IGetConsultationSettingsUseCase,
         @inject('IUpdateConsultationSettingsUseCase') private updateConsultationSettingsUseCase: IUpdateConsultationSettingsUseCase,
-        @inject('IGetConsultationByIdUseCase') private getConsultationByIdUseCase: IGetConsultationByIdUseCase
+        @inject('IGetConsultationByIdUseCase') private getConsultationByIdUseCase: IGetConsultationByIdUseCase,
+        @inject('IUpdateConsultationDateUseCase') private updateConsultationDateUseCase: IUpdateConsultationDateUseCase
     ) {}
 
     async getConsultations(req: Request, res: Response) {
@@ -58,12 +60,34 @@ export class AdminConsultationController {
         } catch (error: any) {
             if (
                 error.message === 'This consultation booking status has already been finalized.' ||
+                error.message === 'This consultation booking status has already been finalized as rejected.' ||
+                error.message === 'This consultation booking has already been completed.' ||
+                error.message === 'An approved consultation can only be marked as COMPLETED.' ||
                 error.message === 'Mark as Refunded is allowed only when consultation is REJECTED and payment is REFUND_PENDING.' ||
                 error.message === 'REFUND_PENDING is allowed only when rejecting a PAID booking.'
             ) {
                 return res.status(400).json({ success: false, message: error.message });
             }
             return res.status(500).json({ success: false, message: error.message || 'Error updating consultation' });
+        }
+    }
+
+    async updateConsultationDate(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const { appointmentDate } = req.body;
+
+            if (!appointmentDate) {
+                return res.status(400).json({ success: false, message: 'Appointment date is required.' });
+            }
+
+            const updated = await this.updateConsultationDateUseCase.execute(id, appointmentDate);
+            if (!updated) {
+                return res.status(404).json({ success: false, message: 'Consultation not found' });
+            }
+            return res.status(200).json({ success: true, message: 'Consultation date updated successfully', data: updated });
+        } catch (error: any) {
+            return res.status(400).json({ success: false, message: error.message || 'Error updating consultation date' });
         }
     }
 

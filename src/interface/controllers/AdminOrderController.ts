@@ -2,11 +2,105 @@ import { Request, Response } from 'express';
 import { OrderModel } from '../../infrastructure/database/models/OrderModel';
 import { container } from '../../infrastructure/config/container';
 import { EmailService } from '../../infrastructure/services/EmailService';
+import { UserModel } from '../../infrastructure/database/models/UserModel';
 
 export const getAllOrders = async (req: Request, res: Response) => {
     try {
         console.log("reaching list order cont");
-        const orders = await OrderModel.find()
+        const { status, search } = req.query;
+        let query: any = {};
+        if (status) {
+            query.globalOrderStatus = status;
+        }
+
+        if (search && typeof search === 'string') {
+            const escapedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (!escapedSearch) {
+                // If it's just whitespace, do not apply search
+                const orders = await OrderModel.find(query)
+                    .populate({ path: 'userId', model: 'User', select: 'displayName email imageUrl' })
+                    .sort({ createdAt: -1 });
+                return res.status(200).json({ success: true, data: orders });
+            }
+            const regex = new RegExp(escapedSearch, 'i');
+
+            const matchingUsers = await UserModel.find({
+                $or: [
+                    { displayName: regex },
+                    { username: regex },
+                    { email: regex },
+                    { phoneNumber: regex }
+                ]
+            }).select('_id');
+            const matchingUserIds = matchingUsers.map(u => u._id);
+
+            const searchOr: any[] = [
+                { orderId: regex },
+                { paymentReferenceId: regex },
+                { razorpayPaymentId: regex }
+            ];
+
+            // Safely search enum fields by pre-matching them
+            const globalOrderStatuses = ['PENDING', 'PLACED', 'PARTIALLY_SHIPPED', 'SHIPPED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'COMPLETED', 'CANCELLED', 'PARTIALLY_RETURNED', 'RETURNED', 'PARTIALLY_CANCELLED', 'PROCESSING', 'PARTIALLY_PROCESSING', 'CANCELLATION_REQUEST', 'RETURN_REQUEST'];
+            const matchedGlobalStatuses = globalOrderStatuses.filter(s => regex.test(s));
+            if (matchedGlobalStatuses.length > 0) {
+                searchOr.push({ globalOrderStatus: { $in: matchedGlobalStatuses } });
+            }
+
+            const paymentStatuses = ['Pending', 'Success', 'Failed', 'Completed', 'Refunded', 'Refund_Pending', 'Cancelled', 'Returned', 'Pending Verification'];
+            const matchedPaymentStatuses = paymentStatuses.filter(s => regex.test(s));
+            if (matchedPaymentStatuses.length > 0) {
+                searchOr.push({ paymentStatus: { $in: matchedPaymentStatuses } });
+            }
+
+            const paymentMethods = ['COD', 'Credit Card', 'Debit Card', 'Net Banking', 'Online', 'Manual UPI'];
+            const matchedPaymentMethods = paymentMethods.filter(s => regex.test(s));
+            if (matchedPaymentMethods.length > 0) {
+                searchOr.push({ paymentMethod: { $in: matchedPaymentMethods } });
+            }
+
+            const productStatuses = ['Pending', 'Order Placed', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Cancellation Request', 'Return Request', 'Return', 'Returned'];
+            const matchedProductStatuses = productStatuses.filter(s => regex.test(s));
+            if (matchedProductStatuses.length > 0) {
+                searchOr.push({ 'orderedProducts.orderStatus': { $in: matchedProductStatuses } });
+            }
+
+            if (matchingUserIds.length > 0) {
+                searchOr.push({ userId: { $in: matchingUserIds } });
+            }
+
+            // Normalize numeric search ONLY for amount field comparison
+            let amountRegexStr = escapedSearch;
+            const parsedNum = Number(search.trim());
+            if (!isNaN(parsedNum) && search.trim() !== '') {
+                amountRegexStr = parsedNum.toString().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            searchOr.push({
+                $expr: {
+                    $regexMatch: {
+                        input: { $toString: { $ifNull: ["$totalAmount", ""] } },
+                        regex: amountRegexStr,
+                        options: "i"
+                    }
+                }
+            });
+
+            query.$or = searchOr;
+        }
+
+        // Apply $and structure to explicitly merge the root query and search filter safely
+        if (query.$or) {
+            const orQuery = query.$or;
+            delete query.$or;
+            if (Object.keys(query).length > 0) {
+                query = { $and: [query, { $or: orQuery }] };
+            } else {
+                query = { $or: orQuery };
+            }
+        }
+
+        const orders = await OrderModel.find(query)
             .populate({ path: 'userId', model: 'User', select: 'displayName email imageUrl' })
             .sort({ createdAt: -1 });
 

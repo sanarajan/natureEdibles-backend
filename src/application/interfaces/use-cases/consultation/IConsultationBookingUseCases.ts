@@ -27,3 +27,7 @@ export interface IGetConsultationByIdUseCase {
 export interface IUpdateConsultationPaymentUseCase {
     execute(id: string, upiReference: string): Promise<ConsultationBooking | null>;
 }
+
+export interface IUpdateConsultationDateUseCase {
+    execute(id: string, newDate: string): Promise<ConsultationBooking | null>;
+}

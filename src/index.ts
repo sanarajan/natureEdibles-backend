@@ -35,6 +35,8 @@ import adminPaymentSettingsRoutes from './interface/routes/admin/adminPaymentSet
 import userPaymentSettingsRoutes from './interface/routes/user/userPaymentSettingsRoutes';
 import adminConsultationRoutes from './interface/routes/admin/adminConsultationRoutes';
 import userConsultationRoutes from './interface/routes/user/userConsultationRoutes';
+import adminDietPlanRoutes from './interface/routes/admin/adminDietPlanRoutes';
+import userDietPlanRoutes from './interface/routes/user/userDietPlanRoutes';
 import userNotificationRoutes from './interface/routes/user/userNotificationRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
 
@@ -62,6 +64,7 @@ import './infrastructure/database/models/PaymentSettingsModel';
 import './infrastructure/database/models/ConsultationSettingsModel';
 import './infrastructure/database/models/ConsultationBookingModel';
 import './infrastructure/database/models/NotificationModel';
+import './infrastructure/database/models/DietPlanModel';
 
 
 
@@ -132,6 +135,8 @@ app.use('/api/admin/payment-settings', adminPaymentSettingsRoutes);
 app.use('/api/user/payment-settings', userPaymentSettingsRoutes);
 app.use('/api/admin/consultation', adminConsultationRoutes);
 app.use('/api/user/consultation', userConsultationRoutes);
+app.use('/api/admin/diet-plan', adminDietPlanRoutes);
+app.use('/api/user/diet-plan', userDietPlanRoutes);
 app.use('/api/user/notifications', userNotificationRoutes);
 
 // Error Handler

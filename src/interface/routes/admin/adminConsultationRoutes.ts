@@ -11,6 +11,7 @@ router.use(adminAuthProtect);
 router.get('/bookings', adminConsultationController.getConsultations.bind(adminConsultationController));
 router.get('/bookings/:id', adminConsultationController.getConsultationById.bind(adminConsultationController));
 router.put('/bookings/:id', adminConsultationController.updateConsultation.bind(adminConsultationController));
+router.put('/bookings/:id/date', adminConsultationController.updateConsultationDate.bind(adminConsultationController));
 
 router.get('/settings', adminConsultationController.getSettings.bind(adminConsultationController));
 router.put('/settings', adminConsultationController.updateSettings.bind(adminConsultationController));

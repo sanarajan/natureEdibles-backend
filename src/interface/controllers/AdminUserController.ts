@@ -2,42 +2,92 @@ import { Request, Response } from 'express';
 import { UserModel } from '../../infrastructure/database/models/UserModel';
 import { OrderModel } from '../../infrastructure/database/models/OrderModel';
 import mongoose from 'mongoose';
+import { UserRole } from '../../constants/enums/UserRole';
 
 export const getAllCustomers = async (req: Request, res: Response) => {
     try {
-        const users = await UserModel.aggregate([
-            { $match: { userType: 2 } }, // Only regular users
-            {
-                $lookup: {
-                    from: 'orders',
-                    localField: '_id',
-                    foreignField: 'userId',
-                    as: 'orders'
+        const { search } = req.query;
+
+        // Initial match for role
+        const pipeline: any[] = [
+            { $match: { role: UserRole.USER } }
+        ];
+
+        // Perform lookups for orders and addresses to access their fields
+        pipeline.push({
+            $lookup: {
+                from: 'orders',
+                localField: '_id',
+                foreignField: 'userId',
+                as: 'orders'
+            }
+        });
+
+        pipeline.push({
+            $lookup: {
+                from: 'addresses',
+                localField: 'address_ids',
+                foreignField: '_id',
+                as: 'addresses'
+            }
+        });
+
+        // Project everything plus stringified fields for searching
+        pipeline.push({
+            $project: {
+                _id: 1,
+                displayName: 1,
+                email: 1,
+                phoneNumber: 1,
+                imageUrl: 1,
+                isActive: 1,
+                createdAt: 1,
+                orderCount: { $size: '$orders' },
+                lastLocation: { $arrayElemAt: ['$addresses', 0] },
+                createdAtStr: { 
+                    $concat: [
+                        { $dateToString: { format: "%d-%m-", date: "$createdAt" } },
+                        { $substrBytes: [ { $dateToString: { format: "%Y", date: "$createdAt" } }, 2, 2 ] }
+                    ]
+                },
+                orderCountStr: { $toString: { $size: '$orders' } }
+            }
+        });
+
+        // Apply global search if present
+        if (search && typeof search === 'string') {
+            const escapedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (escapedSearch) {
+                const searchRegex = new RegExp(escapedSearch, 'i');
+                const searchLower = escapedSearch.toLowerCase();
+                
+                const searchOr: any[] = [
+                    { displayName: searchRegex },
+                    { email: searchRegex },
+                    { phoneNumber: searchRegex },
+                    { createdAtStr: searchRegex },
+                    { orderCountStr: searchRegex },
+                    { "lastLocation.city": searchRegex },
+                    { "lastLocation.district": searchRegex },
+                    { "lastLocation.state": searchRegex }
+                ];
+
+                // Status search mapped to isActive field
+                if ('inactive'.startsWith(searchLower) && searchLower.length >= 3) {
+                    searchOr.push({ isActive: false });
+                } else if ('active'.startsWith(searchLower) && searchLower.length >= 3) {
+                    searchOr.push({ isActive: true });
                 }
-            },
-            {
-                $lookup: {
-                    from: 'addresses',
-                    localField: 'address_ids',
-                    foreignField: '_id',
-                    as: 'addresses'
-                }
-            },
-            {
-                $project: {
-                    _id: 1,
-                    displayName: 1,
-                    email: 1,
-                    phoneNumber: 1,
-                    imageUrl: 1,
-                    isActive: 1,
-                    createdAt: 1,
-                    orderCount: { $size: '$orders' },
-                    lastLocation: { $arrayElemAt: ['$addresses', 0] }
-                }
-            },
-            { $sort: { createdAt: -1 } }
-        ]);
+
+                pipeline.push({
+                    $match: { $or: searchOr }
+                });
+            }
+        }
+
+        pipeline.push({ $sort: { createdAt: -1 } });
+
+        const users = await UserModel.aggregate(pipeline);
 
         res.status(200).json({ success: true, data: users });
     } catch (error: any) {
@@ -52,6 +102,10 @@ export const updateCustomerStatus = async (req: Request, res: Response) => {
         const { isActive } = req.body;
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ success: false, message: 'Invalid user ID' });
+        }
+        const user = await UserModel.findOne({ _id: id, role: UserRole.USER });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Customer not found or invalid role' });
         }
         await UserModel.findByIdAndUpdate(id, { isActive });
         res.status(200).json({ success: true, message: 'Status updated successfully' });

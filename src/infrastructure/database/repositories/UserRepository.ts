@@ -51,7 +51,8 @@ export class UserRepository extends BaseRepository<User, IUserDocument> implemen
                 ...addr.toObject ? addr.toObject() : addr
             })),
             userDoc.createdAt,
-            userDoc.updatedAt
+            userDoc.updatedAt,
+            userDoc.isActive
         );
     }
 
@@ -67,6 +68,7 @@ export class UserRepository extends BaseRepository<User, IUserDocument> implemen
             imageUrl: user.imageUrl,
             referralId: user.referralId,
             referredBy: user.referredBy,
+            isActive: user.isActive,
         };
     }
 

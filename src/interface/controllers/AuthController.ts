@@ -132,6 +132,17 @@ export class AuthController {
 
         try {
             const decoded = await this.authService.verifyRefreshToken(refreshToken);
+
+            const fullUser = await this.userRepository.findById(decoded.id);
+            if (fullUser && fullUser.role === 'USER' && fullUser.isActive === false) {
+                res.status(403).json({
+                    success: false,
+                    message: "Your account has been deactivated. Please contact support.",
+                    code: "ACCOUNT_INACTIVE"
+                });
+                return;
+            }
+
             const { accessToken } = this.authService.generateTokens({
                 id: decoded.id,
                 email: decoded.email,

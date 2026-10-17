@@ -23,7 +23,7 @@ export class EmailService implements IEmailService {
         const verificationLink = `${clientUrl}/verify-email?email=${encodeURIComponent(email)}&token=${otp}`;
 
         const mailOptions = {
-            from: process.env.EMAIL_FROM || 'noreply@nature.com',
+            from: process.env.EMAIL_FROM || 'info@naturaledibles.in',
             to: email,
             subject: 'Verify Your Email Address',
             html: `
@@ -40,8 +40,11 @@ export class EmailService implements IEmailService {
 
         try {
             if (process.env.EMAIL_USER) {
-                await this.transporter.sendMail(mailOptions);
-                console.log(`Verification email sent to ${email}`);
+               const info = await this.transporter.sendMail(mailOptions);
+
+console.log('Email accepted:', info.accepted);
+console.log('Email rejected:', info.rejected);
+console.log('SMTP response:', info.response);
             } else {
                 console.log(`[DEV MODE] Verification Link for ${email}:\n => ${verificationLink}`);
             }

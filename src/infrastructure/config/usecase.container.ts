@@ -9,6 +9,7 @@ import { GetAvailableSlotsUseCase } from '../../application/use-cases/consultati
 import { GetUserConsultationsUseCase } from '../../application/use-cases/consultation/GetUserConsultationsUseCase';
 import { GetAdminConsultationsUseCase } from '../../application/use-cases/consultation/GetAdminConsultationsUseCase';
 import { UpdateConsultationStatusUseCase } from '../../application/use-cases/consultation/UpdateConsultationStatusUseCase';
+import { UpdateConsultationDateUseCase } from '../../application/use-cases/consultation/UpdateConsultationDateUseCase';
 import { GetConsultationByIdUseCase } from '../../application/use-cases/consultation/GetConsultationByIdUseCase';
 import { GetConsultationSettingsUseCase } from '../../application/use-cases/consultation/GetConsultationSettingsUseCase';
 import { UpdateConsultationSettingsUseCase } from '../../application/use-cases/consultation/UpdateConsultationSettingsUseCase';
@@ -28,6 +29,19 @@ container.registerSingleton<GetAvailableSlotsUseCase>('IGetAvailableSlotsUseCase
 container.registerSingleton<GetUserConsultationsUseCase>('IGetUserConsultationsUseCase', GetUserConsultationsUseCase);
 container.registerSingleton<GetAdminConsultationsUseCase>('IGetAdminConsultationsUseCase', GetAdminConsultationsUseCase);
 container.registerSingleton<UpdateConsultationStatusUseCase>('IUpdateConsultationStatusUseCase', UpdateConsultationStatusUseCase);
+container.registerSingleton<UpdateConsultationDateUseCase>('IUpdateConsultationDateUseCase', UpdateConsultationDateUseCase);
+
+// Diet Plan Use Cases
+import { CreateDietPlanUseCase } from '../../application/use-cases/diet-plan/CreateDietPlanUseCase';
+import { UpdateDietPlanUseCase } from '../../application/use-cases/diet-plan/UpdateDietPlanUseCase';
+import { GetDietPlanByConsultationIdUseCase } from '../../application/use-cases/diet-plan/GetDietPlanByConsultationIdUseCase';
+import { GetDietPlansByCustomerIdUseCase } from '../../application/use-cases/diet-plan/GetDietPlansByCustomerIdUseCase';
+
+container.registerSingleton<CreateDietPlanUseCase>('ICreateDietPlanUseCase', CreateDietPlanUseCase);
+container.registerSingleton<UpdateDietPlanUseCase>('IUpdateDietPlanUseCase', UpdateDietPlanUseCase);
+container.registerSingleton<GetDietPlanByConsultationIdUseCase>('IGetDietPlanByConsultationIdUseCase', GetDietPlanByConsultationIdUseCase);
+container.registerSingleton<GetDietPlansByCustomerIdUseCase>('IGetDietPlansByCustomerIdUseCase', GetDietPlansByCustomerIdUseCase);
+
 container.registerSingleton<GetConsultationByIdUseCase>('IGetConsultationByIdUseCase', GetConsultationByIdUseCase);
 container.registerSingleton<GetConsultationSettingsUseCase>('IGetConsultationSettingsUseCase', GetConsultationSettingsUseCase);
 container.registerSingleton<UpdateConsultationSettingsUseCase>('IUpdateConsultationSettingsUseCase', UpdateConsultationSettingsUseCase);

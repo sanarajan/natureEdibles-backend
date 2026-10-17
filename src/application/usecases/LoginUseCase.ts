@@ -21,6 +21,10 @@ export class LoginUseCase implements ILoginUseCase {
             throw new Error(ErrorMessages.INVALID_CREDENTIALS);
         }
 
+        if (user.role === UserRole.USER && user.isActive === false) {
+            throw new Error('Your account is inactive. Please contact support.');
+        }
+
         if (user.verified === false && user.role !== UserRole.ADMIN) {
             throw new Error('Please verify your email address before logging in.');
         }

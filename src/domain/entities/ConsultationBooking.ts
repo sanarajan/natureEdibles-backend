@@ -52,7 +52,7 @@ export class ConsultationBooking {
         public appointmentDate: string, // YYYY-MM-DD
         public appointmentTime: string, // HH:mm
         // System / Admin
-        public status: string = 'PENDING', // PENDING, APPROVED, REJECTED
+        public status: string = 'PENDING', // PENDING, APPROVED, REJECTED, COMPLETED
         public doctorNotes: string = '',
         public recommendedProducts: string[] = [], // Product IDs
         public readonly createdAt: Date = new Date(),
