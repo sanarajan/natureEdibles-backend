@@ -54,6 +54,16 @@ export class AuthController {
         try {
             const { user, accessToken, refreshToken } = await this.loginUseCase.execute(email, password);
 
+            // Enforce ADMIN role when logging in through admin routes
+            const isAdminRoute = (req.baseUrl && req.baseUrl.includes('/admin')) || (req.originalUrl && req.originalUrl.includes('/admin'));
+            if (isAdminRoute && (!user.role || user.role.toUpperCase() !== 'ADMIN')) {
+                res.status(403).json({
+                    success: false,
+                    message: 'Forbidden: Admin access required',
+                });
+                return;
+            }
+
             // Determine prefix based on USER ROLE for safer cookie handling
             const prefix = (user.role.toUpperCase() === 'ADMIN') ? 'admin_' : 'user_';
 
@@ -130,9 +140,14 @@ export class AuthController {
 
     async refresh(req: Request, res: Response): Promise<void> {
         const prefix = req.baseUrl.includes('/admin') ? 'admin_' : 'user_';
-        const refreshToken = req.cookies[`${prefix}refreshToken`];
+        const expectedCookieName = `${prefix}refreshToken`;
+        const hasExpectedCookie = Boolean(req.cookies && req.cookies[expectedCookieName]);
+        const refreshToken = req.cookies ? req.cookies[expectedCookieName] : undefined;
+
+        console.log(`[AUTH REFRESH] Route: ${req.baseUrl || req.originalUrl}, Expected cookie: "${expectedCookieName}", Present: ${hasExpectedCookie}`);
 
         if (!refreshToken) {
+            console.warn(`[AUTH REFRESH] Returning 401: Expected refresh cookie "${expectedCookieName}" is missing`);
             res.status(401).json({ success: false, message: 'Refresh token not found' });
             return;
         }
@@ -171,7 +186,7 @@ export class AuthController {
                 },
             });
         } catch (error: any) {
-            console.error('Refresh Token Error:', error.message);
+            console.error(`[AUTH REFRESH] Returning 401: Token verification failed for "${expectedCookieName}":`, error.message);
             res.status(401).json({ success: false, message: error.message || 'Invalid refresh token' });
         }
     }
