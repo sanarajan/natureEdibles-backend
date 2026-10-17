@@ -61,7 +61,7 @@ export class AuthController {
             res.cookie(`${prefix}refreshToken`, refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
 
@@ -69,7 +69,7 @@ export class AuthController {
             res.cookie(`${prefix}jwt`, accessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 maxAge: 15 * 60 * 1000, // 15 minutes
             });
 
@@ -94,7 +94,7 @@ export class AuthController {
         const cookieOptions: any = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         };
         res.clearCookie(`${prefix}refreshToken`, cookieOptions);
         res.clearCookie(`${prefix}jwt`, cookieOptions);
@@ -159,7 +159,7 @@ export class AuthController {
             res.cookie(`${prefix}jwt`, accessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 maxAge: 15 * 60 * 1000,
             });
 
